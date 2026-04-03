@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 235 86% 65%;
+    --primary-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border box-border;
+  }
+  body, html, #root {
+    @apply bg-slate-100 text-slate-800 m-0 p-0 h-full w-full overflow-hidden antialiased;
+  }
+}
