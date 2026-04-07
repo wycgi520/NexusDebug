@@ -1,12 +1,14 @@
-import { Settings, TerminalSquare, Plus, Search, Usb, Server, Power, X, Network } from "lucide-react";
+import { Settings, TerminalSquare, Plus, Search, Usb, Server, X, Network } from "lucide-react";
 import { useAppStore } from "../store";
 import { useState, useEffect } from "react";
 import { NetworkDialog } from "./NetworkDialog";
+import { SerialDialog } from "./SerialDialog";
 
 export function NavigationSidebar() {
   const { sessions, activeSessionId, availableSerialPorts, fetchSerialPorts, addSession, setActiveSession, removeSession, updateSessionStatus } = useAppStore();
   const [showNewConn, setShowNewConn] = useState(false);
   const [networkDialog, setNetworkDialog] = useState<'TCP_CLIENT' | 'UDP' | null>(null);
+  const [showSerialDialog, setShowSerialDialog] = useState(false);
 
   useEffect(() => {
     fetchSerialPorts();
@@ -74,37 +76,39 @@ export function NavigationSidebar() {
     }
   };
 
-  const handleConnectSerial = async (port: any) => {
-    // Generate a unique ID
-    const sessionId = port.path;
+  const handleConnectSerial = async (config: { path: string; baudRate: number }) => {
+    setShowSerialDialog(false);
+    setShowNewConn(false);
+    const sessionId = config.path;
     // Check if session exists first
     if (!sessions.find(s => s.id === sessionId)) {
       addSession({
         id: sessionId,
         type: 'SERIAL',
-        name: `Serial: ${port.path}`,
+        name: `Serial: ${config.path}`,
         status: 'CONNECTING',
-        config: { path: port.path, baudRate: 115200 },
+        config: { path: config.path, baudRate: config.baudRate },
         logs: []
       });
     } else {
       setActiveSession(sessionId);
+      return;
     }
-    setShowNewConn(false);
 
     try {
       updateSessionStatus(sessionId, 'CONNECTING');
-      const res = await window.api.serialConnect({ path: port.path, baudRate: 115200 });
+      const res = await window.api.serialConnect({ path: config.path, baudRate: config.baudRate });
       if (res.success) {
         updateSessionStatus(sessionId, 'CONNECTED');
       } else {
         updateSessionStatus(sessionId, 'DISCONNECTED');
         console.error('Connection failed:', res.error);
-        alert(`Failed to connect to ${port.path}: ${res.error}`);
+        alert(`连接 ${config.path} 失败: ${res.error}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       updateSessionStatus(sessionId, 'DISCONNECTED');
+      alert(`连接异常: ${e?.message || e}`);
     }
   };
 
@@ -141,18 +145,14 @@ export function NavigationSidebar() {
         
         {showNewConn && (
           <div className="mb-4 bg-white p-3 rounded-2xl border border-indigo-100 shadow-lg shadow-indigo-100/30">
-            <div className="text-[11px] font-bold text-slate-400 mb-2 px-1">可用物理串口 (发现: {availableSerialPorts.length})</div>
-            {availableSerialPorts.map(sp => (
-               <div key={sp.path} onClick={() => handleConnectSerial(sp)} className="px-3 py-2 rounded-xl text-[13px] hover:bg-slate-50 cursor-pointer font-medium text-slate-700 flex justify-between items-center transition-colors">
-                  {sp.path}
-                  <Power size={14} className="text-indigo-400"/>
-               </div>
-            ))}
-            {availableSerialPorts.length === 0 && (
-              <div className="px-3 py-4 text-center text-xs text-slate-400">没有发现可用串口设备</div>
-            )}
-            <div className="w-full h-px bg-slate-100 my-2"></div>
-            <div className="text-[11px] font-bold text-slate-400 mb-2 px-1">快速创建网络</div>
+            <div className="text-[11px] font-bold text-slate-400 mb-2 px-1">快速创建连接</div>
+            <div onClick={() => { fetchSerialPorts(); setShowSerialDialog(true); }} className="px-3 py-2 rounded-xl text-[13px] hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer font-medium text-slate-700 flex items-center gap-2 transition-colors">
+              <Usb size={13} className="text-emerald-500" /> 串口连接
+              {availableSerialPorts.length > 0 && (
+                <span className="ml-auto text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">{availableSerialPorts.length} 可用</span>
+              )}
+            </div>
+            <div className="w-full h-px bg-slate-100 my-1"></div>
             <div onClick={() => setNetworkDialog('TCP_CLIENT')} className="px-3 py-2 rounded-xl text-[13px] hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer font-medium text-slate-700 flex items-center gap-2 transition-colors">
               <Network size={13} className="text-indigo-400" /> TCP 客户端
             </div>
@@ -194,6 +194,14 @@ export function NavigationSidebar() {
           <span className="text-[13px] font-semibold">软件全局设置</span>
         </div>
       </div>
+      {/* Serial Config Dialog */}
+      {showSerialDialog && (
+        <SerialDialog
+          availablePorts={availableSerialPorts}
+          onClose={() => setShowSerialDialog(false)}
+          onConfirm={handleConnectSerial}
+        />
+      )}
       {/* Network Config Dialog */}
       {networkDialog && (
         <NetworkDialog

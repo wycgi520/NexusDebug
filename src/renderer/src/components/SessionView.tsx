@@ -2,10 +2,30 @@ import { Send, Settings2, Trash2, Pause, FastForward } from "lucide-react";
 import { useAppStore } from "../store";
 import { useState, useRef, useEffect } from "react";
 
+/**
+ * Parse a hex string like "FF 01 A2 B3" or "FF,01,A2,B3" or "FF01A2B3"
+ * into a number[] of byte values.
+ * Returns null if the input is invalid.
+ */
+function parseHexString(input: string): number[] | null {
+  // Remove all whitespace, commas, and common separators
+  const cleaned = input.replace(/[\s,;:\-]/g, '');
+  // Must be even length and only hex chars
+  if (cleaned.length === 0 || cleaned.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(cleaned)) {
+    return null;
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i < cleaned.length; i += 2) {
+    bytes.push(parseInt(cleaned.substring(i, i + 2), 16));
+  }
+  return bytes;
+}
+
 export function SessionView() {
   const { activeSessionId, sessions, addLog, clearLogs } = useAppStore();
   const [inputText, setInputText] = useState("Hello Nexus!");
   const [hexMode, setHexMode] = useState(false);
+  const [appendCRLF, setAppendCRLF] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const activeSession = sessions.find(s => s.id === activeSessionId);
@@ -30,7 +50,31 @@ export function SessionView() {
       alert("设备未连接，无法发送");
       return;
     }
-    const dataToSend = Array.from(new TextEncoder().encode(inputText + '\r\n'));
+
+    let dataToSend: number[];
+
+    if (hexMode) {
+      // HEX mode: parse hex string into raw bytes
+      const parsed = parseHexString(inputText);
+      if (parsed === null) {
+        alert("HEX 格式错误！请输入有效的十六进制字符串，例如：FF 01 A2 B3");
+        return;
+      }
+      dataToSend = parsed;
+      // In HEX mode, optionally append \r\n as 0x0D 0x0A
+      if (appendCRLF) {
+        dataToSend = [...dataToSend, 0x0D, 0x0A];
+      }
+    } else {
+      // ASCII mode: encode as UTF-8 text
+      const text = appendCRLF ? inputText + '\r\n' : inputText;
+      dataToSend = Array.from(new TextEncoder().encode(text));
+    }
+
+    if (dataToSend.length === 0) {
+      return;
+    }
+
     if (activeSession.type === 'SERIAL') {
       window.api.serialWrite({ path: activeSession.id, data: dataToSend });
       addLog(activeSession.id, { dir: 'TX', data: dataToSend });
@@ -108,7 +152,7 @@ export function SessionView() {
            
            <div className="flex items-center gap-4 ml-auto">
              <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer hover:text-slate-800 transition-colors">
-               <input type="checkbox" className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-500 border-slate-300" defaultChecked /> 追加 \r\n
+               <input type="checkbox" className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-500 border-slate-300" checked={appendCRLF} onChange={(e) => setAppendCRLF(e.target.checked)} /> 追加 \r\n
              </label>
              <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer hover:text-slate-800 transition-colors">
                <input type="checkbox" className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-500 border-slate-300" /> 循环定时发送
@@ -121,7 +165,7 @@ export function SessionView() {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-[13px] font-mono text-slate-700 resize-none outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400 shadow-inner" 
-            placeholder="Type message here... (Ctrl+Enter to send)"
+            placeholder={hexMode ? "输入十六进制数据，例如：FF 01 A2 B3" : "Type message here... (Ctrl+Enter to send)"}
             onKeyDown={(e) => {
               if (e.ctrlKey && e.key === 'Enter') handleSend();
             }}
