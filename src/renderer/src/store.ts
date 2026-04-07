@@ -34,7 +34,7 @@ interface AppStore {
   clearLogs: (sessionId: string) => void;
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
+export const useAppStore = create<AppStore>((set) => ({
   sessions: [],
   activeSessionId: null,
   availableSerialPorts: [],

@@ -7,7 +7,7 @@ const activeSockets: Map<string, dgram.Socket> = new Map();
 export function setupUdpHandlers(mainWindow: BrowserWindow) {
   
   // 1. 创建并绑定 UDP Socket (监听端口/发送预备)
-  ipcMain.handle('udp:bind', async (event, options) => {
+  ipcMain.handle('udp:bind', async (_event, options) => {
     const { port, address = '0.0.0.0' } = options;
     const id = `udp-${address}:${port}`;
     
@@ -50,7 +50,7 @@ export function setupUdpHandlers(mainWindow: BrowserWindow) {
   });
 
   // 2. 解绑关闭 UDP
-  ipcMain.handle('udp:close', async (event, id) => {
+  ipcMain.handle('udp:close', async (_event, id) => {
     const socket = activeSockets.get(id);
     if (!socket) return { success: false, error: 'Socket is not bound.' };
 
@@ -66,7 +66,7 @@ export function setupUdpHandlers(mainWindow: BrowserWindow) {
   });
 
   // 3. 发送 UDP 数据报文
-  ipcMain.handle('udp:write', async (event, { id, data, targetHost, targetPort }) => {
+  ipcMain.handle('udp:write', async (_event, { id, data, targetHost, targetPort }) => {
     const socket = activeSockets.get(id);
     if (!socket) return { success: false, error: 'Socket is not bound.' };
 

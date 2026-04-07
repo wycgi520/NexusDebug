@@ -17,7 +17,7 @@ export function setupSerialHandlers(mainWindow: BrowserWindow) {
 
   // 2. 连接串口
   // options 包含：path, baudRate, dataBits, stopBits, parity
-  ipcMain.handle('serial:connect', async (event, options) => {
+  ipcMain.handle('serial:connect', async (_event, options) => {
     const { path, baudRate, dataBits = 8, stopBits = 1, parity = 'none' } = options;
     
     if (activePorts.has(path)) {
@@ -67,7 +67,7 @@ export function setupSerialHandlers(mainWindow: BrowserWindow) {
   });
 
   // 3. 断开串口
-  ipcMain.handle('serial:disconnect', async (event, path) => {
+  ipcMain.handle('serial:disconnect', async (_event, path) => {
     const port = activePorts.get(path);
     if (!port) return { success: false, error: 'Port is not connected.' };
 
@@ -84,7 +84,7 @@ export function setupSerialHandlers(mainWindow: BrowserWindow) {
   });
 
   // 4. 发送数据
-  ipcMain.handle('serial:write', async (event, { path, data }) => {
+  ipcMain.handle('serial:write', async (_event, { path, data }) => {
     const port = activePorts.get(path);
     if (!port) return { success: false, error: 'Port is not connected.' };
 

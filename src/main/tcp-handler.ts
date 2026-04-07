@@ -8,7 +8,7 @@ const activeServers: Map<string, net.Server> = new Map();
 export function setupTcpHandlers(mainWindow: BrowserWindow) {
   
   // 1. 作为客户端连接 TCP Server
-  ipcMain.handle('tcp:connect', async (event, options) => {
+  ipcMain.handle('tcp:connect', async (_event, options) => {
     const { host, port } = options;
     const id = `tcp-client-${host}:${port}`;
     
@@ -43,7 +43,7 @@ export function setupTcpHandlers(mainWindow: BrowserWindow) {
   });
 
   // 2. 作为服务端监听 TCP 端口
-  ipcMain.handle('tcp:listen', async (event, options) => {
+  ipcMain.handle('tcp:listen', async (_event, options) => {
     const { port } = options;
     const id = `tcp-server-${port}`;
 
@@ -88,7 +88,7 @@ export function setupTcpHandlers(mainWindow: BrowserWindow) {
   });
 
   // 3. 断开连接或关闭服务端
-  ipcMain.handle('tcp:disconnect', async (event, id) => {
+  ipcMain.handle('tcp:disconnect', async (_event, id) => {
     if (activeSockets.has(id)) {
       const socket = activeSockets.get(id);
       socket?.destroy();
@@ -107,7 +107,7 @@ export function setupTcpHandlers(mainWindow: BrowserWindow) {
   });
 
   // 4. 发送数据
-  ipcMain.handle('tcp:write', async (event, { id, data }) => {
+  ipcMain.handle('tcp:write', async (_event, { id, data }) => {
     const socket = activeSockets.get(id);
     if (!socket) return { success: false, error: 'Socket is not connected.' };
 
